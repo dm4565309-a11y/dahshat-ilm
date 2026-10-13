@@ -56,6 +56,57 @@ async function cached(name, fn) {
   return value;
 }
 
+// ---------------- games & simulations (JSON) ----------------
+const LEVELS = { a: "الصفوف من الأول إلى الرابع (لغة بسيطة جداً وجمل قصيرة)", b: "الصفوف من الخامس إلى الثامن", c: "الصفوف من التاسع إلى الثاني عشر" };
+function jsonPrompt(mode, g, level) {
+  const who = g === "f" ? "طالبة" : g === "m" ? "طالب" : "طالب أو طالبة";
+  const common = `أنت مصمّم ألعاب ومحاكاة تعليمية لنادي «دهشة علم» في مدرسة بسلطنة عُمان. المستخدم ${who} في ${LEVELS[level] || "المدرسة"}.
+- اكتب كل النصوص بعربية فصحى سليمة وبسيطة ومشجّعة، وكن دقيقاً علمياً ولا تخترع معلومات.
+- إذا كان الموضوع خطراً أو غير مناسب للأطفال (نار، مواد خطرة، كهرباء المنزل، عنف)، فأعد فقط: {"error":"unsafe","message":"سبب لطيف واقتراح موضوع آمن"}.
+- أعد JSON صالحاً فقط، دون أي نص قبله أو بعده، ودون علامات \`\`\`.`;
+  if (mode === "game") return common + `
+صمّم لعبة تعليمية عن الموضوع الذي سيكتبه المستخدم، بهذا الشكل بالضبط:
+{"title":"عنوان قصير جذاب","intro":"جملة ترحيب مشجعة",
+ "quiz":[{"q":"سؤال","choices":["خيار","خيار","خيار","خيار"],"answer":0,"why":"شرح قصير للإجابة الصحيحة"}],
+ "tf":[{"s":"عبارة","t":true,"why":"شرح قصير"}],
+ "order":{"task":"رتّب خطوات ...","steps":["الخطوة الأولى","الثانية","الثالثة","الرابعة"]}}
+الشروط: quiz فيها 5 أسئلة بالضبط، لكل سؤال 4 خيارات مختلفة، و answer هو رقم الخيار الصحيح من 0 إلى 3 (نوّع مكانه). tf فيها 4 عبارات (صحيحة وخاطئة). order فيها من 4 إلى 6 خطوات مكتوبة بترتيبها الصحيح لتجربة أو عملية مرتبطة بالموضوع.`;
+  return common + `
+صمّم محاكاة تفاعلية لتجربة علمية عن الموضوع الذي سيكتبه المستخدم، بهذا الشكل بالضبط:
+{"title":"اسم التجربة","goal":"ماذا سنكتشف؟ جملة واحدة",
+ "materials":[{"name":"اسم الأداة","emoji":"🧪"}],
+ "steps":[{"do":"ماذا نفعل","see":"ماذا نلاحظ","emoji":"💧","fx":"bubbles"}],
+ "variable":{"name":"ماذا لو غيّرنا ...؟","options":[{"label":"قليل","result":"ماذا يحدث","level":1},{"label":"متوسط","result":"...","level":2},{"label":"كثير","result":"...","level":3}]},
+ "science":"شرح علمي بسيط لما حدث في جملتين أو ثلاث","safety":"تنبيه سلامة قصير"}
+الشروط: من 3 إلى 6 أدوات، ومن 3 إلى 6 خطوات، و emoji رمز تعبيري واحد يناسب كل أداة وخطوة. fx واحدة من: bubbles (فقاعات)، color (تغيّر لون)، fill (امتلاء)، rise (ارتفاع/طفو)، glow (ضوء/حرارة)، none. variable فيها 3 خيارات و level من 1 إلى 3 حسب شدة التأثير.`;
+}
+function parseJSON(text) {
+  let t = String(text || "").replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "").trim();
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a < 0 || b < a) return null;
+  try { return JSON.parse(t.slice(a, b + 1)); } catch { return null; }
+}
+const str = (x) => typeof x === "string" && x.trim().length > 0;
+function checkGame(d) {
+  if (!d || d.error === "unsafe") return d && str(d.message) ? d : null;
+  if (!str(d.title) || !Array.isArray(d.quiz) || d.quiz.length < 3) return null;
+  d.quiz = d.quiz.filter((x) => x && str(x.q) && Array.isArray(x.choices) && x.choices.length >= 2 && x.choices.every(str) && Number.isInteger(x.answer) && x.answer >= 0 && x.answer < x.choices.length).slice(0, 6);
+  d.tf = (Array.isArray(d.tf) ? d.tf : []).filter((x) => x && str(x.s) && typeof x.t === "boolean").slice(0, 5);
+  const st = d.order && Array.isArray(d.order.steps) ? d.order.steps.filter(str).slice(0, 6) : [];
+  d.order = st.length >= 3 ? { task: str(d.order.task) ? d.order.task : "رتّب الخطوات", steps: st } : null;
+  return d.quiz.length >= 3 ? d : null;
+}
+function checkSim(d) {
+  if (!d || d.error === "unsafe") return d && str(d.message) ? d : null;
+  if (!str(d.title) || !Array.isArray(d.steps) || d.steps.length < 2) return null;
+  d.materials = (Array.isArray(d.materials) ? d.materials : []).filter((m) => m && str(m.name)).slice(0, 8);
+  d.steps = d.steps.filter((x) => x && str(x.do)).slice(0, 8);
+  const v = d.variable;
+  d.variable = v && str(v.name) && Array.isArray(v.options) ? { name: v.name, options: v.options.filter((o) => o && str(o.label) && str(o.result)).slice(0, 4) } : null;
+  if (d.variable && d.variable.options.length < 2) d.variable = null;
+  return d.steps.length >= 2 ? d : null;
+}
+
 // ---------------- Google Gemini ----------------
 const GEMINI = "https://generativelanguage.googleapis.com/v1beta";
 const SAFETY = ["HARM_CATEGORY_HARASSMENT", "HARM_CATEGORY_HATE_SPEECH", "HARM_CATEGORY_SEXUALLY_EXPLICIT", "HARM_CATEGORY_DANGEROUS_CONTENT"]
@@ -93,9 +144,11 @@ function geminiThinking(id) {
   if (/^gemini-2\.5/.test(id)) return [{ thinkingBudget: 0 }, null];
   return [null];
 }
-async function geminiLane(key, id, q, sys, signal, log) {
+async function geminiLane(key, id, q, job, signal, log) {
+  const sys = job.sys;
   for (const thinking of geminiThinking(id)) {
-    const generationConfig = { temperature: 0.3, maxOutputTokens: 1200 };
+    const generationConfig = { temperature: job.json ? 0.6 : 0.3, maxOutputTokens: job.max };
+    if (job.json) generationConfig.responseMimeType = "application/json";
     if (thinking) generationConfig.thinkingConfig = thinking;
     const t0 = Date.now();
     let r;
@@ -114,6 +167,7 @@ async function geminiLane(key, id, q, sys, signal, log) {
     const text = ((cand.content && cand.content.parts) || []).filter((p) => !p.thought).map((p) => p.text || "").join("").trim();
     info.finish = cand.finishReason || (data.promptFeedback && data.promptFeedback.blockReason) || "";
     log.push(info);
+    if (text && job.check) { const data = job.check(parseJSON(text)); if (data) return { kind: "ok", data, by: id }; info.error = "bad_json"; return { kind: "failed" }; }
     if (text) return { kind: "ok", text, by: id };
     return { kind: /SAFETY|PROHIBITED|BLOCK/.test(info.finish) ? "blocked" : "failed" };
   }
@@ -141,14 +195,16 @@ async function chatModel(p, key) {
     return ids[0] || null;
   });
 }
-async function chatLane(p, key, q, sys, signal, log) {
+async function chatLane(p, key, q, job, signal, log) {
+  const sys = job.sys;
   let model;
   try { model = await chatModel(p, key); } catch (e) { log.push({ by: p.name, error: e.kind, status: e.status }); return { kind: e.kind === "bad_key" ? "bad_key" : "failed" }; }
   if (!model) { log.push({ by: p.name, error: "no_model" }); return { kind: "failed" }; }
   const messages = [{ role: "system", content: sys }, { role: "user", content: q }];
+  const rf = job.json ? { response_format: { type: "json_object" } } : {};
   const bodies = p.openai
-    ? [{ model, messages, max_completion_tokens: 1500, reasoning_effort: "minimal" }, { model, messages, max_completion_tokens: 1500 }]
-    : [{ model, messages, max_tokens: 1200, temperature: 0.3 }, { model, messages }];
+    ? [{ model, messages, max_completion_tokens: job.max + 500, reasoning_effort: "minimal", ...rf }, { model, messages, max_completion_tokens: job.max + 500, ...rf }, { model, messages }]
+    : [{ model, messages, max_tokens: job.max, temperature: job.json ? 0.6 : 0.3, ...rf }, { model, messages, max_tokens: job.max }, { model, messages }];
   for (const body of bodies) {
     const t0 = Date.now();
     let r;
@@ -167,6 +223,7 @@ async function chatLane(p, key, q, sys, signal, log) {
     const text = String((ch.message && ch.message.content) || "").replace(/<think>[\s\S]*?<\/think>/g, "").trim();
     info.finish = ch.finish_reason || "";
     log.push(info);
+    if (text && job.check) { const data = job.check(parseJSON(text)); if (data) return { kind: "ok", data, by: `${p.name}/${model}` }; info.error = "bad_json"; return { kind: "failed" }; }
     if (text) return { kind: "ok", text, by: `${p.name}/${model}` };
     return { kind: info.finish === "content_filter" ? "blocked" : "failed" };
   }
@@ -192,14 +249,16 @@ function geminiPick(ids) {
   return [...new Set([full[0], lite[0], full[1] || lite[1]].filter(Boolean))];
 }
 
-async function ask(q, g) {
-  const sys = systemPrompt(g);
+async function ask(q, g, mode, level) {
+  const job = mode === "game" ? { sys: jsonPrompt("game", g, level), json: true, check: checkGame, max: 2200 }
+    : mode === "sim" ? { sys: jsonPrompt("sim", g, level), json: true, check: checkSim, max: 2200 }
+    : { sys: systemPrompt(g), json: false, check: null, max: 1200 };
   const log = [];
   const ctl = new AbortController();
   const lanes = []; // {prio, run: Promise<result>}
   const geminiLanes = [];
   for (const pr of providers()) {
-    if (pr.type === "chat") { lanes.push({ prio: pr.p.prio, run: chatLane(pr.p, pr.key, q, sys, ctl.signal, log) }); continue; }
+    if (pr.type === "chat") { lanes.push({ prio: pr.p.prio, run: chatLane(pr.p, pr.key, q, job, ctl.signal, log) }); continue; }
     geminiLanes.push(pr);
   }
   // Gemini: the first key runs up to 3 models (strong + fast), extra keys run their strongest model as backup
@@ -208,7 +267,7 @@ async function ask(q, g) {
       const ids = geminiPick(await geminiModels(pr.key));
       if (!ids.length) { log.push({ by: pr.name, error: "no_model" }); return; }
       (i === 0 ? ids : ids.slice(0, 1)).forEach((id) =>
-        lanes.push({ prio: geminiPrio(id) - (i ? 20 : 0), run: geminiLane(pr.key, id, q, sys, ctl.signal, log) }));
+        lanes.push({ prio: geminiPrio(id) - (i ? 20 : 0), run: geminiLane(pr.key, id, q, job, ctl.signal, log) }));
     } catch (e) { log.push({ by: pr.name, error: e.kind, status: e.status }); lanes.push({ prio: 0, run: Promise.resolve({ kind: e.kind === "bad_key" ? "bad_key" : "failed" }) }); }
   }));
   void geminiSetups;
@@ -240,7 +299,7 @@ async function ask(q, g) {
     }, () => { pending.delete(lane); fails.push({ kind: "failed" }); check(); }));
   });
   ctl.abort();
-  if (res.kind === "ok") return { answer: res.text, by: res.by, log };
+  if (res.kind === "ok") return { answer: res.text, data: res.data, by: res.by, log };
   return { error: res.kind, log };
 }
 
@@ -262,11 +321,15 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  let q = "", g = "";
-  try { const b = await req.json(); q = String(b.q || "").trim(); g = b.g === "f" || b.g === "m" ? b.g : ""; } catch {}
+  let q = "", g = "", mode = "", level = "";
+  try {
+    const b = await req.json(); q = String(b.q || "").trim(); g = b.g === "f" || b.g === "m" ? b.g : "";
+    mode = b.mode === "game" || b.mode === "sim" ? b.mode : ""; level = ["a", "b", "c"].includes(b.level) ? b.level : "";
+  } catch {}
   if (q.length < 2) return json({ error: "empty" }, 400);
   if (q.length > 600) q = q.slice(0, 600);
-  const out = await ask(q, g);
+  const out = await ask(q, g, mode, level);
+  if (out.data) return json({ data: out.data, by: out.by });
   if (out.answer) return json({ answer: out.answer, by: out.by });
   const detail = (out.log || []).map((t) => [t.by, t.status || t.error, t.ms ? t.ms + "ms" : ""].filter(Boolean).join(" ")).join(" | ");
   const err = out.error === "failed" ? "no_model" : out.error;
