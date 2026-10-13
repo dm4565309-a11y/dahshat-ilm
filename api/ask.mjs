@@ -71,6 +71,18 @@ function jsonPrompt(mode, g, level) {
  "tf":[{"s":"عبارة","t":true,"why":"شرح قصير"}],
  "order":{"task":"رتّب خطوات ...","steps":["الخطوة الأولى","الثانية","الثالثة","الرابعة"]}}
 الشروط: quiz فيها 5 أسئلة بالضبط، لكل سؤال 4 خيارات مختلفة، و answer هو رقم الخيار الصحيح من 0 إلى 3 (نوّع مكانه). tf فيها 4 عبارات (صحيحة وخاطئة). order فيها من 4 إلى 6 خطوات مكتوبة بترتيبها الصحيح لتجربة أو عملية مرتبطة بالموضوع.`;
+  if (mode === "qsheet") return common + `
+صمّم ورقة أسئلة (ورقة عمل تقييمية) عن الموضوع أو الدرس، مقسّمة على مستويات التفكير الثلاثة (كما في اختبارات TIMSS):
+- «معرفة»: تذكّر الحقائق والمفاهيم والمصطلحات، التعرّف، التعريف، الوصف البسيط.
+- «تطبيق»: استخدام المعرفة في مواقف مألوفة: مقارنة، تصنيف، قراءة جدول أو بيانات، تفسير ظاهرة من الحياة اليومية، حل مسألة.
+- «استدلال»: مواقف جديدة غير مألوفة: تحليل، استنتاج، تنبؤ، تبرير، تصميم تجربة بسيطة، تقييم رأي، تعميم.
+أعد بهذا الشكل بالضبط:
+{"title":"عنوان الورقة","instructions":"تعليمات قصيرة للطالب",
+ "sections":[
+  {"level":"معرفة","items":[{"type":"mcq","q":"سؤال","choices":["","","",""],"answer":0,"marks":1},{"type":"tf","q":"عبارة","answer":true,"marks":1},{"type":"fill","q":"جملة فيها فراغ ______ يكملها الطالب","answer":"الكلمة","marks":1}]},
+  {"level":"تطبيق","items":[{"type":"short","q":"سؤال يحتاج إجابة قصيرة","answer":"الإجابة النموذجية","lines":2,"marks":2}]},
+  {"level":"استدلال","items":[{"type":"short","q":"سؤال تفكير","answer":"الإجابة النموذجية","lines":3,"marks":3}]}]}
+الشروط: الأقسام الثلاثة بهذا الترتيب. معرفة: 5 أسئلة متنوعة (mcq و tf و fill). تطبيق: 4 أسئلة (mcq أو short). استدلال: 3 أسئلة (short غالباً، ويمكن mcq). type واحد من: mcq, tf, fill, short. في mcq أربعة خيارات و answer رقم الصحيح من 0 إلى 3 (نوّع مكانه). في fill ضع ______ مكان الفراغ. اكتب answer لكل سؤال (لورقة إجابات المعلم). marks عدد صحيح من 1 إلى 4. لا تكرر الأسئلة، ونوّع الأفعال، واجعل الصياغة مناسبة للمرحلة الدراسية.`;
   if (mode === "sheet") return common + `
 صمّم ورقة نشاط (ورقة عمل) مطبوعة لتجربة علمية عن الموضوع، يملؤها الطالب بالقلم، بهذا الشكل بالضبط:
 {"title":"عنوان النشاط","objective":"هدف النشاط في جملة","materials":["أداة","أداة"],"safety":"تنبيه سلامة",
@@ -118,6 +130,25 @@ function checkSheet(d) {
   d.table = t && Array.isArray(t.columns) && t.columns.filter(str).length >= 2
     ? { title: str(t.title) ? t.title : "جدول الملاحظات", columns: t.columns.filter(str).slice(0, 5), rows: Math.min(6, Math.max(2, parseInt(t.rows, 10) || 3)) } : null;
   return d;
+}
+function checkQSheet(d) {
+  if (!d || d.error === "unsafe") return d && str(d.message) ? d : null;
+  if (!str(d.title) || !Array.isArray(d.sections)) return null;
+  const NAMES = ["معرفة", "تطبيق", "استدلال"];
+  d.sections = d.sections.filter((s) => s && Array.isArray(s.items)).slice(0, 3).map((s, i) => ({
+    level: NAMES.includes(String(s.level || "").trim()) ? String(s.level).trim() : NAMES[i] || "أسئلة",
+    items: s.items.filter((x) => x && str(x.q) && (
+      x.type === "mcq" ? Array.isArray(x.choices) && x.choices.filter(str).length >= 2 && Number.isInteger(x.answer)
+      : x.type === "tf" ? typeof x.answer === "boolean"
+      : x.type === "fill" || x.type === "short")).slice(0, 8).map((x) => {
+        const o = { type: x.type, q: x.q, marks: Math.min(5, Math.max(1, parseInt(x.marks, 10) || 1)) };
+        if (x.type === "mcq") { o.choices = x.choices.filter(str).slice(0, 4); o.answer = Math.min(o.choices.length - 1, Math.max(0, x.answer)); }
+        else if (x.type === "tf") o.answer = x.answer;
+        else { o.answer = str(x.answer) ? x.answer : ""; if (x.type === "short") o.lines = Math.min(5, Math.max(1, parseInt(x.lines, 10) || 2)); }
+        return o;
+      }),
+  })).filter((s) => s.items.length);
+  return d.sections.length >= 2 ? d : null;
 }
 function checkSim(d) {
   if (!d || d.error === "unsafe") return d && str(d.message) ? d : null;
@@ -167,9 +198,21 @@ function geminiThinking(id) {
   if (/^gemini-2\.5/.test(id)) return [{ thinkingBudget: 0 }, null];
   return [null];
 }
-async function geminiLane(key, id, q, job, signal, log) {
+const noThink = new Set(); // "model|config" pairs that returned 400
+async function geminiLane(key, id, q, job, signal, log, spare) {
+  const r1 = await geminiTry(key, id, q, job, signal, log);
+  if (r1.kind !== "busy" || !spare) return r1;
+  // this model's free quota is used up: try other models (each has its own quota)
+  while (spare.length && !signal.aborted) {
+    const next = spare.shift();
+    const r = await geminiTry(key, next, q, job, signal, log);
+    if (r.kind !== "busy") return r;
+  }
+  return r1;
+}
+async function geminiTry(key, id, q, job, signal, log) {
   const sys = job.sys;
-  for (const thinking of geminiThinking(id)) {
+  for (const thinking of geminiThinking(id).filter((t) => !noThink.has(id + "|" + JSON.stringify(t)))) {
     const generationConfig = { temperature: job.json ? 0.6 : 0.3, maxOutputTokens: job.max };
     if (job.json) generationConfig.responseMimeType = "application/json";
     if (thinking) generationConfig.thinkingConfig = thinking;
@@ -183,7 +226,7 @@ async function geminiLane(key, id, q, job, signal, log) {
       });
     } catch { log.push({ by: id, error: signal.aborted ? "timeout" : "network", ms: Date.now() - t0 }); return { kind: "timeout" }; }
     const info = { by: id, status: r.status, ms: Date.now() - t0 };
-    if (r.status === 400) { info.detail = (await r.text()).slice(0, 120); log.push(info); continue; }
+    if (r.status === 400) { info.detail = (await r.text()).slice(0, 160); log.push(info); if (thinking && /thinking/i.test(info.detail)) noThink.add(id + "|" + JSON.stringify(thinking)); continue; }
     if (!r.ok) { log.push(info); return { kind: r.status === 429 ? "busy" : r.status === 401 || r.status === 403 ? "bad_key" : "failed" }; }
     const data = await r.json();
     const cand = (data.candidates || [])[0] || {};
@@ -208,6 +251,23 @@ const CHAT = [
   { name: "deepseek", prio: 75, key: "DEEPSEEK_API_KEY", model: "DEEPSEEK_MODEL", base: "https://api.deepseek.com/v1",
     prefer: [/^deepseek-chat$/, /^deepseek-v/, /^deepseek-/] },
 ];
+const VISION = {
+  groq: [/llama-4-maverick/, /llama-4-scout/, /vision/, /llama-4/],
+  openrouter: [/gemma-3.*:free$/, /llama-4.*:free$/, /qwen.*vl.*:free$/, /mistral-small.*:free$/, /:free$/],
+};
+async function chatVisionModel(p, key) {
+  if (p.openai) return chatModel(p, key);
+  if (!VISION[p.name]) return null;
+  return cached(p.name + ":vision", async () => {
+    const r = await fetch(`${p.base}/models`, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw { kind: r.status === 401 || r.status === 403 ? "bad_key" : "list_failed", status: r.status };
+    const list = (await r.json()).data || [];
+    const ids = list.filter((m) => p.name !== "openrouter" || ((m.architecture && m.architecture.input_modalities) || []).includes("image")).map((m) => m.id)
+      .filter((id) => !/audio|tts|whisper|embed|guard|moderation/i.test(id));
+    for (const re of VISION[p.name]) { const hit = ids.filter((id) => re.test(id)).sort().reverse()[0]; if (hit) return hit; }
+    return null;
+  });
+}
 async function chatModel(p, key) {
   if (env(p.model)) return env(p.model);
   return cached(p.name, async () => {
@@ -221,9 +281,9 @@ async function chatModel(p, key) {
 async function chatLane(p, key, q, job, signal, log) {
   const sys = job.sys;
   let model;
-  try { model = await chatModel(p, key); } catch (e) { log.push({ by: p.name, error: e.kind, status: e.status }); return { kind: e.kind === "bad_key" ? "bad_key" : "failed" }; }
-  if (!model) { log.push({ by: p.name, error: "no_model" }); return { kind: "failed" }; }
-  if ((q.images || []).length && !p.openai) { log.push({ by: p.name, error: "no_images" }); return { kind: "failed" }; }
+  const vision = (q.images || []).length > 0;
+  try { model = vision ? await chatVisionModel(p, key) : await chatModel(p, key); } catch (e) { log.push({ by: p.name, error: e.kind, status: e.status }); return { kind: e.kind === "bad_key" ? "bad_key" : "failed" }; }
+  if (!model) { log.push({ by: p.name, error: vision ? "no_images" : "no_model" }); return { kind: "failed" }; }
   const userContent = (q.images || []).length
     ? [{ type: "text", text: q.text }, ...q.images.map((im) => ({ type: "image_url", image_url: { url: `data:${im.mime};base64,${im.data}` } }))]
     : q.text;
@@ -281,6 +341,7 @@ async function ask(input, g, mode, level) {
   const job = mode === "game" ? { sys: jsonPrompt("game", g, level), json: true, check: checkGame, max: 2200 }
     : mode === "sim" ? { sys: jsonPrompt("sim", g, level), json: true, check: checkSim, max: 2200 }
     : mode === "sheet" ? { sys: jsonPrompt("sheet", g, level), json: true, check: checkSheet, max: 2400 }
+    : mode === "qsheet" ? { sys: jsonPrompt("qsheet", g, level), json: true, check: checkQSheet, max: 3200 }
     : { sys: systemPrompt(g), json: false, check: null, max: 1200 };
   const log = [];
   const ctl = new AbortController();
@@ -295,8 +356,10 @@ async function ask(input, g, mode, level) {
     try {
       const ids = geminiPick(await geminiModels(pr.key));
       if (!ids.length) { log.push({ by: pr.name, error: "no_model" }); return; }
-      (i === 0 ? ids : ids.slice(0, 1)).forEach((id) =>
-        lanes.push({ prio: geminiPrio(id) - (i ? 20 : 0), run: geminiLane(pr.key, id, q, job, ctl.signal, log) }));
+      const all = await geminiModels(pr.key), used = i === 0 ? ids : ids.slice(0, 1);
+      const spare = all.filter((id) => !used.includes(id)).slice(0, 6); // shared backup list for this key
+      used.forEach((id) =>
+        lanes.push({ prio: geminiPrio(id) - (i ? 20 : 0), run: geminiLane(pr.key, id, q, job, ctl.signal, log, spare) }));
     } catch (e) { log.push({ by: pr.name, error: e.kind, status: e.status }); lanes.push({ prio: 0, run: Promise.resolve({ kind: e.kind === "bad_key" ? "bad_key" : "failed" }) }); }
   }));
   void geminiSetups;
@@ -353,7 +416,7 @@ export async function POST(req) {
   let q = "", g = "", mode = "", level = "", fileText = "", images = [];
   try {
     const b = await req.json(); q = String(b.q || "").trim(); g = b.g === "f" || b.g === "m" ? b.g : "";
-    mode = ["game", "sim", "sheet"].includes(b.mode) ? b.mode : ""; level = ["a", "b", "c"].includes(b.level) ? b.level : "";
+    mode = ["game", "sim", "sheet", "qsheet"].includes(b.mode) ? b.mode : ""; level = ["a", "b", "c"].includes(b.level) ? b.level : "";
     if (mode) {
       fileText = String(b.fileText || "").slice(0, 15000);
       images = (Array.isArray(b.images) ? b.images : []).slice(0, 4)
