@@ -2,7 +2,9 @@
 //   GET            -> health check: {"ok":true,"key":true,"models":[...]}  (models this key can use)
 //   GET ?test=1    -> asks Gemini a sample question and shows what happened (for troubleshooting)
 //   POST {q}       -> {"answer":"..."}  or  {"error":"...","detail":"..."}
+// Runs as a Netlify EDGE function (can wait ~40 s for Gemini, unlike normal functions' 10 s).
 // Sends a student's question to Google Gemini. The API key stays on the server.
+const env = (k) => (globalThis.Netlify && Netlify.env && Netlify.env.get(k)) || (globalThis.Deno && Deno.env.get(k)) || (typeof process !== "undefined" && process.env ? process.env[k] : undefined);
 
 const SYSTEM = `أنت «مساعد دهشة علم»، مساعد علمي لطلبة نادي التجارب والابتكارات في مدرسة بسلطنة عُمان (من الصف الأول إلى الثاني عشر).
 - أجب بالعربية الفصحى البسيطة، بجمل قصيرة وواضحة، ومع مثال من الحياة اليومية عند الحاجة.
@@ -30,9 +32,9 @@ function rank(id) {
   return r;
 }
 async function models(key) {
-  if (process.env.GEMINI_MODEL) return [process.env.GEMINI_MODEL];
+  if (env("GEMINI_MODEL")) return [env("GEMINI_MODEL")];
   if (cache.list && Date.now() - cache.at < 10 * 60 * 1000) return cache.list;
-  const r = await fetch(`${API}/models?pageSize=200`, { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(4000) });
+  const r = await fetch(`${API}/models?pageSize=200`, { headers: { "x-goog-api-key": key }, signal: AbortSignal.timeout(8000) });
   if (r.status === 400 || r.status === 401 || r.status === 403) throw { code: "bad_key", status: r.status };
   if (!r.ok) throw { code: "list_failed", status: r.status };
   const data = await r.json();
@@ -52,16 +54,16 @@ function thinkingOptions(id) {
 }
 
 async function ask(key, q) {
-  const deadline = Date.now() + 9300; // Netlify stops functions after ~10 s
+  const deadline = Date.now() + 30000; // edge functions may wait up to ~40 s
   const tried = [];
   let list;
   try { list = await models(key); } catch (e) { return { error: e.code || "list_failed", tried: [{ step: "list", status: e.status }] }; }
   if (!list.length) return { error: "no_model", tried: [{ step: "list", found: 0 }] };
 
-  for (const id of list.slice(0, 3)) {
+  for (const id of list.slice(0, 4)) {
     for (const thinking of thinkingOptions(id)) {
       const left = deadline - Date.now();
-      if (left < 1500) return { error: "timeout", tried };
+      if (left < 2000) return { error: "timeout", tried };
       const generationConfig = { temperature: 0.4, maxOutputTokens: 1024 };
       if (thinking) generationConfig.thinkingConfig = thinking;
       const t0 = Date.now();
@@ -71,11 +73,11 @@ async function ask(key, q) {
           method: "POST",
           headers: { "content-type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify({ system_instruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: "user", parts: [{ text: q }] }], generationConfig, safetySettings: SAFETY }),
-          signal: AbortSignal.timeout(left - 500),
+          signal: AbortSignal.timeout(Math.min(left - 500, 20000)),
         });
       } catch (e) {
         tried.push({ model: id, thinking, error: "timeout", ms: Date.now() - t0 });
-        return { error: "timeout", tried };
+        break; // this model is too slow: try the next one
       }
       const info = { model: id, thinking, status: r.status, ms: Date.now() - t0 };
       if (r.status === 400) { info.detail = (await r.text()).slice(0, 160); tried.push(info); continue; } // try without that thinking setting
@@ -96,7 +98,7 @@ async function ask(key, q) {
 }
 
 export default async (req) => {
-  const key = process.env.GEMINI_API_KEY;
+  const key = env("GEMINI_API_KEY");
   const url = new URL(req.url);
   if (req.method === "GET") {
     if (!key) return json({ ok: false, key: false });
@@ -121,4 +123,4 @@ export default async (req) => {
   return json({ error: out.error, status: last.status || 0, detail }, status);
 };
 
-export const config = { path: "/api/ask" };
+export const config = { path: "/api/ask", cache: "manual" };

@@ -567,7 +567,7 @@ function askHere(){
   var q=String(ui.aiq||"").trim();if(q.length<2){ui.aiAns={err:"اكتب سؤالك أولاً."};updateAi();return;}
   if(ui.aiAns&&ui.aiAns.loading)return;
   ui.aiAns={loading:true};updateAi();play("tap");
-  var ctl=window.AbortController?new AbortController():null,timer=setTimeout(function(){if(ctl)ctl.abort();},30000);
+  var ctl=window.AbortController?new AbortController():null,timer=setTimeout(function(){if(ctl)ctl.abort();},45000);
   fetch("/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({q:q}),signal:ctl?ctl.signal:undefined}).then(function(r){
     var ct=r.headers.get("content-type")||"";
     if(!r.ok||ct.indexOf("application/json")>-1){
@@ -604,7 +604,7 @@ function askHere(){
     play("error");updateAi();});
 }
 function aiAnswer(){var a=ui.aiAns;if(!a)return "";
-  if(a.loading)return '<div class="ai-answer ai-wait"><span class="spin"></span>يفكّر المساعد في إجابتك…</div>';
+  if(a.loading)return '<div class="ai-answer ai-wait"><span class="spin"></span>يفكّر المساعد في إجابتك… قد يستغرق ذلك حتى نصف دقيقة</div>';
   if(a.err)return '<div class="ai-answer ai-err">'+esc(a.err)+(a.detail?'<div class="hint" dir="ltr" style="margin-top:6px;text-align:left">'+esc(a.detail)+"</div>":"")+"</div>";
   return '<div class="ai-answer"><div class="ai-answer-head">'+ic("ai",18)+'مساعد دهشة علم</div><div class="ai-answer-body" id="ai-body">'+mdLite(a.text)+(a.streaming?'<span class="ai-cursor"></span>':"")+'</div><p class="hint">قد يخطئ الذكاء الاصطناعي أحياناً؛ تحقّق من المعلومة مع معلمتك.</p></div>';}
 function aiResults(){
