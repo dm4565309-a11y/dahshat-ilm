@@ -386,6 +386,7 @@ main{flex:1}
 .ws-preview .ws-line{border-bottom:1px dotted #8a959e;height:22px;margin:0 0 4px}
 .ws-preview .ws-obj{background:#e3f4f4;padding:6px 10px;border-radius:8px}.ws-preview .ws-safe{background:#fdeee6;border:1px solid #e07a4f;padding:6px 10px;border-radius:8px}.ws-preview .ws-ext{background:#fff6d6;border:1px dashed #d4a017;padding:6px 10px;border-radius:8px;margin-top:12px}.ws-preview .ws-foot{text-align:center;font-size:12px;color:#888}
 .sheet-btns{margin-bottom:6px}
+.ws-preview .q-lv{overflow:hidden}.ws-preview .q-item{margin:6px 0 10px}.ws-preview .q-q{margin:4px 0}.ws-preview .q-ch td{padding:2px 10px}.ws-preview .q-key{margin-top:28px;border-top:3px dashed #ccc;padding-top:10px}
 @media (max-width:560px){.ws-preview{padding:14px}.ws-preview .ws-id td{display:block;white-space:normal}.ws-preview .ws-mats td{display:block;width:auto}}
 .bk-drop{animation:dropin .6s both}
 @keyframes dropin{from{transform:translateY(-140px);opacity:0}to{transform:none;opacity:1}}
@@ -711,43 +712,44 @@ function aiModal(){
   return modalShell('<div class="modal-head"><span class="mark ai-mark">'+ic("ai",28)+'</span><div><h2>اسأل الذكاء الاصطناعي</h2><p>اكتب سؤالك العلمي وستظهر الإجابة هنا</p></div>'+closeBtn()+'</div><form class="form" id="ai-form" novalidate><div class="field"><span>أنا</span>'+seg("aig",ui.aiG||"",[["m","طالب","user"],["f","طالبة","user"]])+'</div><label class="field"><span>سؤالك</span><textarea class="input" id="ai-q" rows="3" placeholder="مثال: لماذا السماء زرقاء؟">'+esc(ui.aiq||"")+'</textarea></label><div class="form-foot"><button type="submit" class="btn btn-primary">'+ic("ai",18)+'اسأل المساعد</button></div><label class="ai-simple"><input type="checkbox" id="ai-simple"'+(ui.aiSimple!==false?" checked":"")+'> اطلب شرحاً مبسّطاً عند الفتح في الأدوات الأخرى</label><div class="ai-ideas">'+AI_IDEAS.map(function(t){return '<button type="button" class="ai-idea" data-act="ai-idea" data-q="'+esc(t)+'">'+esc(t)+"</button>";}).join("")+'</div></form><div id="ai-results">'+aiResults()+'</div><p class="hint">تفتح هذه الأدوات خارج موقع النادي. بعضها يتطلب أن يكون عمر المستخدم ١٣ سنة فأكثر، فاستعن بوليّ أمرك أو معلمتك.</p>',false,"البحث بالذكاء الاصطناعي");
 }
 /* ---------- games & simulations ---------- */
-var LAB_IDEAS={game:["المغناطيس","الكائنات الحية وغير الحية","حالات المادة","المجموعة الشمسية","الكهرباء والدوائر"],sim:["بركان الخل والصودا","طفو البيضة في الماء المالح","نمو نبتة الفاصولياء","إضاءة مصباح ببطارية","صنع قوس قزح بالمنشور"],sheet:["الطفو والغوص","ذوبان السكر في الماء","الدائرة الكهربائية البسيطة","إنبات البذور","المغناطيس وجذب الأشياء"]};
-var LAB_TXT={game:{ic:"game",ask:"عن أي موضوع تريد اللعبة؟",ph:"مثال: المغناطيس — أو اترك الحقل فارغاً وأرفق ملفاً",go:"أنشئ اللعبة",wait:"نصمّم لعبتك…"},sim:{ic:"beaker",ask:"اكتب التجربة التي تريد محاكاتها",ph:"مثال: بركان الخل والصودا",go:"أنشئ المحاكاة",wait:"نجهّز مختبرك الافتراضي…"},sheet:{ic:"doc",ask:"اكتب التجربة التي تريد لها ورقة نشاط",ph:"مثال: الطفو والغوص — أو أرفق درساً لنصنع منه النشاط",go:"أنشئ ورقة النشاط",wait:"نكتب ورقة النشاط…"}};
+var LAB_IDEAS={game:["المغناطيس","الكائنات الحية وغير الحية","حالات المادة","المجموعة الشمسية","الكهرباء والدوائر"],sim:["بركان الخل والصودا","طفو البيضة في الماء المالح","نمو نبتة الفاصولياء","إضاءة مصباح ببطارية","صنع قوس قزح بالمنشور"],qsheet:["المغناطيس","حالات المادة","أجزاء النبات","الدائرة الكهربائية","الصوت والضوء"],sheet:["الطفو والغوص","ذوبان السكر في الماء","الدائرة الكهربائية البسيطة","إنبات البذور","المغناطيس وجذب الأشياء"]};
+var LAB_TXT={game:{ic:"game",ask:"عن أي موضوع تريد اللعبة؟",ph:"مثال: المغناطيس — أو اترك الحقل فارغاً وأرفق ملفاً",go:"أنشئ اللعبة",wait:"نصمّم لعبتك…"},sim:{ic:"beaker",ask:"اكتب التجربة التي تريد محاكاتها",ph:"مثال: بركان الخل والصودا",go:"أنشئ المحاكاة",wait:"نجهّز مختبرك الافتراضي…"},qsheet:{ic:"doc",ask:"عن أي درس أو موضوع تريد الأسئلة؟",ph:"مثال: المغناطيس — أو أرفق الدرس (PDF أو Word أو صورة) لنصنع منه الأسئلة",go:"أنشئ ورقة الأسئلة",wait:"نكتب الأسئلة بمستوياتها الثلاثة…"},sheet:{ic:"doc",ask:"اكتب التجربة التي تريد لها ورقة نشاط",ph:"مثال: الطفو والغوص — أو أرفق درساً لنصنع منه النشاط",go:"أنشئ ورقة النشاط",wait:"نكتب ورقة النشاط…"}};
 function inl(t){return esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");}
 function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function labState(){if(!ui.lab)ui.lab={mode:"game",level:"",topic:"",data:null,loading:false,err:""};try{if(!ui.lab.level)ui.lab.level=localStorage.getItem("dh-lv")||"b";}catch(e){ui.lab.level=ui.lab.level||"b";}return ui.lab;}
 function labModal(){
-  var L=labState(),T=LAB_TXT[L.mode]||LAB_TXT.game;
+  var L=labState(),T=LAB_TXT[L.mode==="sheet"&&L.sk==="q"?"qsheet":L.mode]||LAB_TXT.game,ideas=LAB_IDEAS[L.mode==="sheet"&&L.sk==="q"?"qsheet":L.mode];
   var form='<form class="form" id="lab-form" novalidate>'+
     '<div class="field"><span>ماذا تريد أن تصنع؟</span>'+seg("labmode",L.mode,[["game","لعبة تعليمية","game"],["sim","محاكاة تجربة","beaker"],["sheet","ورقة نشاط","doc"]])+'</div>'+
+    (L.mode==="sheet"?'<div class="field"><span>نوع الورقة</span>'+seg("labsk",L.sk||"exp",[["exp","نشاط تجربة","beaker"],["q","أسئلة (معرفة · تطبيق · استدلال)","doc"]])+'</div>':"")+
     '<div class="row2"><div class="field"><span>أنا</span>'+seg("aig",ui.aiG||"",[["m","طالب","user"],["f","طالبة","user"]])+'</div><div class="field"><span>الصفوف</span>'+seg("lablv",L.level,[["a","١–٤"],["b","٥–٨"],["c","٩–١٢"]])+'</div></div>'+
     '<label class="field"><span>'+T.ask+'</span><textarea class="input" id="lab-q" rows="2" placeholder="'+T.ph+'">'+esc(L.topic)+'</textarea></label>'+
     '<div id="lab-filebox">'+labFileHTML()+'</div>'+
-    '<div class="ai-ideas">'+LAB_IDEAS[L.mode].map(function(t){return '<button type="button" class="ai-idea" data-act="lab-idea" data-q="'+esc(t)+'">'+esc(t)+"</button>";}).join("")+'</div>'+
+    '<div class="ai-ideas">'+ideas.map(function(t){return '<button type="button" class="ai-idea" data-act="lab-idea" data-q="'+esc(t)+'">'+esc(t)+"</button>";}).join("")+'</div>'+
     '<div class="form-foot"><button type="submit" class="btn btn-primary"'+(L.loading?" disabled":"")+'>'+ic(T.ic,18)+T.go+"</button></div></form>";
   return modalShell('<div class="modal-head"><span class="mark ai-mark">'+ic(T.ic,28)+'</span><div><h2>ألعاب ومحاكاة</h2><p>اكتب موضوعاً أو أرفق ملفاً، وسيصنع لك الذكاء الاصطناعي لعبة أو مختبراً افتراضياً أو ورقة نشاط</p></div>'+closeBtn()+"</div>"+form+'<div id="lab-area">'+labArea()+"</div>",true,"ألعاب ومحاكاة");
 }
 function labArea(){
   var L=ui.lab;if(!L)return "";
-  if(L.loading)return '<div class="ai-answer ai-wait"><span class="spin"></span>'+(LAB_TXT[L.mode]||LAB_TXT.game).wait+" قد يستغرق ذلك حتى نصف دقيقة</div>";
+  if(L.loading)return '<div class="ai-answer ai-wait"><span class="spin"></span>'+(LAB_TXT[L.mode==="sheet"&&L.sk==="q"?"qsheet":L.mode]||LAB_TXT.game).wait+" قد يستغرق ذلك حتى نصف دقيقة</div>";
   if(L.err)return '<div class="ai-answer ai-err">'+esc(L.err)+(L.detail?'<div class="hint" dir="ltr" style="margin-top:6px;text-align:left">'+esc(L.detail)+"</div>":"")+"</div>";
   if(!L.data)return "";
   if(L.data.error==="unsafe")return '<div class="ai-answer ai-err">'+ic("info",18)+" "+esc(L.data.message)+"</div>";
-  return L.data.quiz?gameView(L):L.dataMode==="sheet"?sheetView(L):simView(L);
+  return L.data.quiz?gameView(L):(L.dataMode==="sheet"||L.dataMode==="qsheet")?sheetView(L):simView(L);
 }
 function labGo(){
   var L=labState(),ta=document.getElementById("lab-q");if(ta)L.topic=ta.value;
   var q=String(L.topic||"").trim(),F=L.file&&!L.file.err&&!L.file.busy?L.file:null;
   if(L.file&&L.file.busy){toast("انتظر قليلاً حتى ننتهي من قراءة الملف");return;}
   if(q.length<2&&!F){L.err="اكتب موضوعاً أو تجربة، أو أرفق ملفاً أولاً.";L.data=null;updateLab();return;}
-  if(L.loading)return;var body={q:q,g:ui.aiG||"",mode:L.mode,level:L.level};if(F){if(F.text)body.fileText=F.text;if(F.images&&F.images.length)body.images=F.images;}L.reqMode=L.mode;
+  if(L.loading)return;var body={q:q,g:ui.aiG||"",mode:L.mode==="sheet"&&L.sk==="q"?"qsheet":L.mode,level:L.level};if(F){if(F.text)body.fileText=F.text;if(F.images&&F.images.length)body.images=F.images;}L.reqMode=body.mode;
   L.loading=true;L.err="";L.data=null;L.detail="";play("tap");render();
   var ctl=window.AbortController?new AbortController():null,timer=setTimeout(function(){if(ctl)ctl.abort();},50000);
   fetch("/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),signal:ctl?ctl.signal:undefined})
   .then(function(r){return r.json().catch(function(){return {};}).then(function(j){return {ok:r.ok,status:r.status,j:j};});})
   .then(function(x){clearTimeout(timer);L.loading=false;
     if(x.ok&&x.j.data){L.data=x.j.data;L.dataMode=L.reqMode;labReset();play(x.j.data.error?"error":"success");}
-    else{L.err=aiErrText(x.j.error,x.status);L.detail=x.j.detail||"";play("error");}
+    else{L.err=aiErrText(x.j.error,x.status)+(body.images&&(x.j.error==="busy"||x.j.error==="no_model")?" قراءة الصور تحتاج حصة من مفتاح يدعم الصور (Gemini أو Groq أو OpenRouter أو OpenAI)؛ وإن تكرر ذلك فارفع ملف Word أو PowerPoint أو PDF نصياً بدل الصورة.":"");L.detail=x.j.detail||"";play("error");}
     render();var a=document.getElementById("lab-area");if(a)a.scrollIntoView({behavior:"smooth",block:"start"});})
   .catch(function(e){clearTimeout(timer);L.loading=false;L.err=e&&e.name==="AbortError"?aiErrText("timeout"):"تعذّر الاتصال. تحقق من الإنترنت ثم حاول مجدداً.";play("error");render();});
 }
@@ -928,11 +930,28 @@ function updateLabFile(){var e=document.getElementById("lab-filebox");if(e)e.inn
 /* ---------- worksheet ---------- */
 function absUrl(sel){var i=document.querySelector(sel);return i?i.src:"";}
 function wsLines(n){var s="";for(var i=0;i<n;i++)s+='<p class="ws-line" style="border-bottom:1pt dotted #8a959e;margin:0 0 6pt;height:20pt">&nbsp;</p>';return s;}
-function sheetHTML(d){
+function wsHead(kind,extra){
   var lg=[[".lg-moe","وزارة التعليم"],[".lg-school","شعار المدرسة"],[".lg-vision","رؤية عمان 2040"]].map(function(x){var u=absUrl(x[0]);return u?'<img src="'+esc(u)+'" alt="'+x[1]+'" height="56" style="height:56px">':"";}).join("&nbsp;&nbsp;&nbsp;");
+  return '<div class="ws-logos">'+lg+'</div><p class="ws-club">نادي دهشة علم للتجارب والابتكارات الطلابية · '+kind+'</p><table class="ws-id" width="100%" style="width:100%"><tr><td>الاسم: ........................................</td><td>الصف: ..............</td><td>التاريخ: ..............</td>'+(extra||"")+"</tr></table>";}
+var QLV={"معرفة":{n:"المستوى الأول",c:"#0f8a8f",bg:"#e3f4f4",tip:"أتذكّر وأتعرّف"},"تطبيق":{n:"المستوى الثاني",c:"#c77700",bg:"#fff3dc",tip:"أطبّق ما تعلّمته"},"استدلال":{n:"المستوى الثالث",c:"#8e44ad",bg:"#f3e8fa",tip:"أفكّر وأستنتج"}};
+var AR_L=["أ","ب","ج","د"];
+function qsheetHTML(d,withKey){
+  var n=0,total=0,key=[];
+  d.sections.forEach(function(s){s.items.forEach(function(x){total+=x.marks||1;});});
+  var body=d.sections.map(function(s){var lv=QLV[s.level]||{n:"",c:"#0f5e63",bg:"#eef3f5",tip:""},sm=0;s.items.forEach(function(x){sm+=x.marks||1;});
+    return '<h2 class="q-lv" style="color:'+lv.c+';border-bottom:2pt solid '+lv.c+'">'+(lv.n?lv.n+": ":"")+esc(s.level)+(lv.tip?' <span style="font-size:11pt;font-weight:400;color:#555">('+lv.tip+")</span>":"")+'<span style="font-size:11pt;font-weight:400;color:#555"> &nbsp;·&nbsp; '+(sm===1?"درجة واحدة":sm===2?"درجتان":arNum(sm)+(sm<=10?" درجات":" درجة"))+"</span></h2>"+
+      s.items.map(function(x){n++;var num='<b style="color:'+lv.c+'">'+arNum(n)+".</b> ",mk=' <span class="q-mk" style="color:#777;font-size:10.5pt">('+arNum(x.marks||1)+")</span>",out;
+        if(x.type==="mcq"){out='<p class="q-q">'+num+inl(x.q)+mk+'</p><table class="q-ch" width="100%" style="width:100%"><tr>'+x.choices.map(function(c,k){return (k===2?"</tr><tr>":"")+'<td width="50%" style="padding:2pt 10pt">○ '+AR_L[k]+") "+esc(c)+"</td>";}).join("")+"</tr></table>";key.push([n,AR_L[x.answer]+") "+x.choices[x.answer]]);}
+        else if(x.type==="tf"){out='<p class="q-q">'+num+"ضع علامة (✓) أو (✗): "+inl(x.q)+' &nbsp;&nbsp;<b>(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</b>'+mk+"</p>";key.push([n,x.answer?"✓ صحيحة":"✗ خاطئة"]);}
+        else if(x.type==="fill"){var q=esc(x.q);if(!/_{3,}/.test(q))q+=" ......................";out='<p class="q-q">'+num+"أكمل: "+q.replace(/_{3,}/g,"........................")+mk+"</p>";key.push([n,x.answer]);}
+        else{out='<p class="q-q">'+num+inl(x.q)+mk+"</p>"+wsLines(x.lines||2);key.push([n,x.answer]);}
+        return '<div class="q-item">'+out+"</div>";}).join("");}).join("");
+  var keyHTML=withKey?'<div class="q-key" style="page-break-before:always"><br clear="all" style="page-break-before:always"><h1>ورقة الإجابات (للمعلم)</h1><p style="text-align:center">'+esc(d.title)+'</p><table class="ws-table" width="100%" border="1" cellspacing="0" cellpadding="6" style="width:100%;border-collapse:collapse"><tr><th width="12%" style="border:1pt solid #4a6b80;background:#e3f4f4">السؤال</th><th style="border:1pt solid #4a6b80;background:#e3f4f4">الإجابة</th></tr>'+key.map(function(k){return '<tr><td style="border:1pt solid #4a6b80;text-align:center">'+arNum(k[0])+'</td><td style="border:1pt solid #4a6b80;text-align:right">'+esc(k[1]||"—")+"</td></tr>";}).join("")+"</table></div>":"";
+  return wsHead("ورقة أسئلة",'<td>الدرجة: ...... / '+arNum(total)+"</td>")+"<h1>"+esc(d.title)+"</h1>"+(d.instructions?'<p class="ws-obj"><b>التعليمات:</b> '+inl(d.instructions)+"</p>":"")+body+'<p class="ws-foot">انتهت الأسئلة · بالتوفيق يا عباقرة 🌟</p>'+keyHTML;}
+function wsBody(){var L=ui.lab;return L.dataMode==="qsheet"?qsheetHTML(L.data,!!L.withKey):sheetHTML(L.data);}
+function sheetHTML(d){
   var t=d.table,rows="";if(t){for(var r=0;r<t.rows;r++)rows+="<tr>"+t.columns.map(function(){return '<td style="border:1pt solid #4a6b80;height:28pt">&nbsp;</td>';}).join("")+"</tr>";}
-  return '<div class="ws-logos">'+lg+'</div><p class="ws-club">نادي دهشة علم للتجارب والابتكارات الطلابية · ورقة نشاط</p>'+
-   '<table class="ws-id" width="100%" style="width:100%"><tr><td>الاسم: ........................................</td><td>الصف: ..............</td><td>التاريخ: ..............</td></tr></table>'+
+  return wsHead("ورقة نشاط")+
    "<h1>"+esc(d.title)+"</h1>"+
    (d.objective?'<p class="ws-obj"><b>🎯 هدف النشاط:</b> '+inl(d.objective)+"</p>":"")+
    (d.intro?"<p>"+inl(d.intro)+"</p>":"")+
@@ -951,11 +970,11 @@ var WS_CSS='body{font-family:Tajawal,"Segoe UI",Tahoma,Arial,sans-serif;directio
  'p{margin:4pt 0}ol{margin:4pt 0;padding-right:22pt;padding-left:0}li{margin:3pt 0}.ws-logos{text-align:center}.ws-club{text-align:center;font-size:11pt;color:#555;margin:2pt 0 8pt}'+
  'table{border-collapse:collapse;width:100%}.ws-id td{font-size:12pt;padding:4pt 2pt}.ws-mats td{width:50%;padding:2pt 4pt;font-size:13pt}'+
  '.ws-table th,.ws-table td{border:1pt solid #4a6b80;padding:6pt;text-align:center}.ws-table th{background:#e3f4f4;font-size:12.5pt}.ws-table td{height:28pt}'+
- '.ws-line{border-bottom:1pt dotted #8a959e;height:20pt;margin:0 0 4pt}.ws-obj{background:#e3f4f4;padding:6pt 8pt;border-radius:6pt}'+
+ '.q-item{margin:4pt 0 8pt;page-break-inside:avoid}.q-q{margin:3pt 0}.q-lv{overflow:hidden}.ws-line{border-bottom:1pt dotted #8a959e;height:20pt;margin:0 0 4pt}.ws-obj{background:#e3f4f4;padding:6pt 8pt;border-radius:6pt}'+
  '.ws-safe{background:#fdeee6;border:1pt solid #e07a4f;padding:6pt 8pt;border-radius:6pt}.ws-ext{background:#fff6d6;border:1pt dashed #d4a017;padding:6pt 8pt;border-radius:6pt;margin-top:12pt}.ws-foot{text-align:center;font-size:10pt;color:#888;margin-top:14pt}'+
  '@page{size:A4;margin:12mm}@media print{.ws{padding:0}h2{page-break-after:avoid}li,tr{page-break-inside:avoid}}';
 function sheetDoc(d,forWord){
-  return "<!DOCTYPE html><html dir=\"rtl\" lang=\"ar\""+(forWord?' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"':"")+'><head><meta charset="utf-8"><title>'+esc(d.title)+"</title>"+(forWord?"":'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@700&family=Tajawal:wght@400;700&display=swap">')+"<style>"+WS_CSS+(forWord?"body{font-family:Arial,sans-serif}h1,h2{font-family:Arial,sans-serif}":"")+'</style></head><body dir="rtl"><div class="ws">'+(forWord?sheetHTML(d).replace(/(?:[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u26A0\u270F\u2702])\uFE0F?\s?/g,""):sheetHTML(d))+"</div></body></html>";}
+  return "<!DOCTYPE html><html dir=\"rtl\" lang=\"ar\""+(forWord?' xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"':"")+'><head><meta charset="utf-8"><title>'+esc(d.title)+"</title>"+(forWord?"":'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@700&family=Tajawal:wght@400;700&display=swap">')+"<style>"+WS_CSS+(forWord?"body{font-family:Arial,sans-serif}h1,h2{font-family:Arial,sans-serif}":"")+'</style></head><body dir="rtl"><div class="ws">'+(forWord?wsBody().replace(/(?:[\uD83C-\uD83E][\uDC00-\uDFFF]|[\u26A0\u270F\u2702])\uFE0F?\s?/g,""):wsBody())+"</div></body></html>";}
 function sheetFile(d){return String(d.title||"ورقة نشاط").replace(/[\\\/:*?"<>|]+/g,"").slice(0,60)||"ورقة نشاط";}
 function sheetPrint(){var d=ui.lab&&ui.lab.data;if(!d)return;var html=sheetDoc(d,false);
   var w=window.open("","_blank");
@@ -963,7 +982,7 @@ function sheetPrint(){var d=ui.lab&&ui.lab.data;if(!d)return;var html=sheetDoc(d
   var f=document.createElement("iframe");f.style.cssText="position:fixed;width:0;height:0;border:0;left:0;bottom:0";document.body.appendChild(f);var dd=f.contentWindow.document;dd.open();dd.write(html);dd.close();setTimeout(function(){f.contentWindow.focus();f.contentWindow.print();setTimeout(function(){f.remove();},2000);},900);}
 function sheetWord(){var d=ui.lab&&ui.lab.data;if(!d)return;var blob=new Blob(["﻿"+sheetDoc(d,true)],{type:"application/msword"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=sheetFile(d)+".doc";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);toast("تم تنزيل ملف Word");}
 function sheetView(L){var d=L.data;
-  return '<div class="sheet-wrap"><div class="form-foot sheet-btns"><button type="button" class="btn btn-primary" data-act="ws-pdf">'+ic("download",18)+'حفظ PDF / طباعة</button><button type="button" class="btn btn-quiet" data-act="ws-word">'+ic("doc",18)+'تنزيل Word</button><button type="button" class="btn btn-ghost" data-act="lab-new">ورقة جديدة</button></div><p class="hint">لحفظها PDF: اضغط «حفظ PDF / طباعة» ثم اختر «حفظ كملف PDF» من نافذة الطباعة.</p><div class="ws ws-preview">'+sheetHTML(d)+"</div></div>";}
+  return '<div class="sheet-wrap"><div class="form-foot sheet-btns"><button type="button" class="btn btn-primary" data-act="ws-pdf">'+ic("download",18)+'حفظ PDF / طباعة</button><button type="button" class="btn btn-quiet" data-act="ws-word">'+ic("doc",18)+'تنزيل Word</button><button type="button" class="btn btn-ghost" data-act="lab-new">ورقة جديدة</button></div><p class="hint">لحفظها PDF: اضغط «حفظ PDF / طباعة» ثم اختر «حفظ كملف PDF» من نافذة الطباعة.</p>'+(L.dataMode==="qsheet"?'<label class="ai-simple"><input type="checkbox" id="ws-key"'+(L.withKey?" checked":"")+'> أضف ورقة الإجابات للمعلم في آخر الملف</label>':"")+'<div class="ws ws-preview">'+wsBody()+"</div></div>";}
 
 function simAct(a,el){
   var L=ui.lab,p=L.play;
@@ -1172,7 +1191,7 @@ function submit(){
 app.addEventListener("click",function(e){
   var s=e.target.closest("[data-seg]");
   if(s){play("tap");var g=s.dataset.seg,v=s.dataset.val;
-    if(g==="labmode"||g==="lablv"){var L0=labState(),lt=document.getElementById("lab-q");if(lt)L0.topic=lt.value;if(g==="labmode"){L0.mode=v;L0.data=null;L0.err="";}else{L0.level=v;try{localStorage.setItem("dh-lv",v);}catch(e){}}}else if(g==="aig"){var lt2=document.getElementById("lab-q");if(lt2&&ui.lab)ui.lab.topic=lt2.value;ui.aiG=v;try{localStorage.setItem("dh-g",v);}catch(e){}var ta0=document.getElementById("ai-q");if(ta0)ui.aiq=ta0.value;}else if(g==="field"){ui.field=v;}else if(g==="kind"){ui.kind=v;}else if(g==="nkind"){readForm();ui.draft.kind=v;if(v==="link")ui.draft.images=[];else if(v==="video")ui.draft.images=ui.draft.images.slice(0,1);}
+    if(g==="labmode"||g==="lablv"||g==="labsk"){var L0=labState(),lt=document.getElementById("lab-q");if(lt)L0.topic=lt.value;if(g==="labsk"){L0.sk=v;L0.data=null;L0.err="";}else if(g==="labmode"){L0.mode=v;L0.data=null;L0.err="";}else{L0.level=v;try{localStorage.setItem("dh-lv",v);}catch(e){}}}else if(g==="aig"){var lt2=document.getElementById("lab-q");if(lt2&&ui.lab)ui.lab.topic=lt2.value;ui.aiG=v;try{localStorage.setItem("dh-g",v);}catch(e){}var ta0=document.getElementById("ai-q");if(ta0)ui.aiq=ta0.value;}else if(g==="field"){ui.field=v;}else if(g==="kind"){ui.kind=v;}else if(g==="nkind"){readForm();ui.draft.kind=v;if(v==="link")ui.draft.images=[];else if(v==="video")ui.draft.images=ui.draft.images.slice(0,1);}
     render();return;}
   var el=e.target.closest("[data-act]");if(!el)return;
   var a=el.dataset.act,id=el.dataset.id;
@@ -1220,7 +1239,7 @@ app.addEventListener("submit",function(e){e.preventDefault();if(e.target.id==="l
 function updateAi(){var box=document.getElementById("ai-results");if(box)box.innerHTML=aiResults();}
 app.addEventListener("input",function(e){if(e.target.id==="lab-q"&&ui.lab){ui.lab.topic=e.target.value;}
   if(e.target.id==="ai-q"){ui.aiq=e.target.value;if(ui.aiAns&&!ui.aiAns.loading)ui.aiAns=null;updateAi();}});
-app.addEventListener("change",function(e){if(e.target.id==="ai-simple"){ui.aiSimple=e.target.checked;updateAi();}if(e.target.id==="lab-file"&&e.target.files&&e.target.files[0]){labFile(e.target.files[0]);e.target.value="";}});
+app.addEventListener("change",function(e){if(e.target.id==="ai-simple"){ui.aiSimple=e.target.checked;updateAi();}if(e.target.id==="ws-key"&&ui.lab){ui.lab.withKey=e.target.checked;updateLab();}if(e.target.id==="lab-file"&&e.target.files&&e.target.files[0]){labFile(e.target.files[0]);e.target.value="";}});
 app.addEventListener("keydown",function(e){if(e.target.id==="ai-q"&&e.key==="Enter"&&!e.shiftKey){e.preventDefault();askHere();}});
 app.addEventListener("change",function(e){if(e.target.id==="f-images"&&e.target.files.length)addFiles(e.target.files);if(e.target.id==="f-vfile"&&e.target.files.length)addVideo(e.target.files[0],e.target.dataset.field);});
 app.addEventListener("change",function(e){if(e.target.id==="f-video"||(e.target.id==="f-url"&&ui.draft&&ui.draft.kind==="video")){readForm();render();}});
