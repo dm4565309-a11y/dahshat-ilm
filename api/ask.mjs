@@ -71,14 +71,26 @@ function jsonPrompt(mode, g, level) {
  "tf":[{"s":"عبارة","t":true,"why":"شرح قصير"}],
  "order":{"task":"رتّب خطوات ...","steps":["الخطوة الأولى","الثانية","الثالثة","الرابعة"]}}
 الشروط: quiz فيها 5 أسئلة بالضبط، لكل سؤال 4 خيارات مختلفة، و answer هو رقم الخيار الصحيح من 0 إلى 3 (نوّع مكانه). tf فيها 4 عبارات (صحيحة وخاطئة). order فيها من 4 إلى 6 خطوات مكتوبة بترتيبها الصحيح لتجربة أو عملية مرتبطة بالموضوع.`;
+  if (mode === "sheet") return common + `
+صمّم ورقة نشاط (ورقة عمل) مطبوعة لتجربة علمية عن الموضوع، يملؤها الطالب بالقلم، بهذا الشكل بالضبط:
+{"title":"عنوان النشاط","objective":"هدف النشاط في جملة","materials":["أداة","أداة"],"safety":"تنبيه سلامة",
+ "intro":"مقدمة قصيرة مشوّقة","steps":["الخطوة الأولى","الثانية"],"predict":"سؤال: ماذا تتوقع أن يحدث؟",
+ "table":{"title":"جدول الملاحظات","columns":["المحاولة","ماذا فعلت","ماذا لاحظت"],"rows":3},
+ "questions":["سؤال تفكير","سؤال"],"conclusion":"عبارة تساعد الطالب على كتابة استنتاجه","extension":"تحدٍّ إضافي في البيت"}
+الشروط: من 3 إلى 8 أدوات، ومن 4 إلى 8 خطوات واضحة ومرقّمة ضمنياً، وجدول من 2 إلى 4 أعمدة و rows من 2 إلى 5، ومن 3 إلى 5 أسئلة متدرّجة الصعوبة. لا تكتب الإجابات.`;
   return common + `
-صمّم محاكاة تفاعلية لتجربة علمية عن الموضوع الذي سيكتبه المستخدم، بهذا الشكل بالضبط:
-{"title":"اسم التجربة","goal":"ماذا سنكتشف؟ جملة واحدة",
- "materials":[{"name":"اسم الأداة","emoji":"🧪"}],
- "steps":[{"do":"ماذا نفعل","see":"ماذا نلاحظ","emoji":"💧","fx":"bubbles"}],
+صمّم محاكاة تفاعلية لتجربة علمية عن الموضوع، بهذا الشكل بالضبط:
+{"title":"اسم التجربة","goal":"ماذا سنكتشف؟ جملة واحدة","vessel":"glass",
+ "materials":[{"name":"اسم الأداة بالعربية","icon":"vinegar"}],
+ "steps":[{"do":"ماذا نفعل","see":"ماذا نلاحظ","icon":"vinegar","color":"","fx":"foam"}],
  "variable":{"name":"ماذا لو غيّرنا ...؟","options":[{"label":"قليل","result":"ماذا يحدث","level":1},{"label":"متوسط","result":"...","level":2},{"label":"كثير","result":"...","level":3}]},
  "science":"شرح علمي بسيط لما حدث في جملتين أو ثلاث","safety":"تنبيه سلامة قصير"}
-الشروط: من 3 إلى 6 أدوات، ومن 3 إلى 6 خطوات، و emoji رمز تعبيري واحد يناسب كل أداة وخطوة. fx واحدة من: bubbles (فقاعات)، color (تغيّر لون)، fill (امتلاء)، rise (ارتفاع/طفو)، glow (ضوء/حرارة)، none. variable فيها 3 خيارات و level من 1 إلى 3 حسب شدة التأثير.`;
+الشروط:
+- icon يجب أن يكون اسماً واحداً من هذه القائمة فقط، واختر الأقرب فعلاً لما تصفه: beaker, glass, cup, bottle, jar, bowl, plate, flask, test_tube, spoon, dropper, funnel, ruler, timer, thermometer, magnifier, water, vinegar, oil, milk, honey, food_coloring, soap, salt, sugar, baking_soda, ice, lemon, egg, balloon, coin, paperclip, nail, magnet, battery, bulb, wire, foil, paper, straw, string, rubber_band, toothpick, cotton, sponge, rock, sand, soil, seed, plant, leaf, apple, potato, flashlight, mirror, prism, sun, pencil, scissors, ball, feather, wood, clay, glue, toy_car.
+- vessel هو الوعاء الذي تحدث فيه التجربة، واحد من: beaker, glass, bottle, jar, bowl, plate, tray (استخدم tray للتجارب التي لا تحتاج وعاء سائل مثل الدوائر الكهربائية والمغناطيس والنباتات).
+- color لون السائل بعد الخطوة إن تغيّر، واحد من: clear, blue, red, yellow, green, purple, orange, brown, white, pink، أو اتركه فارغاً.
+- fx المؤثر المرئي في الخطوة، واحد من: bubbles (فقاعات)، foam (رغوة تفور)، color (تغيّر لون)، fill (سكب سائل)، rise (يطفو/يرتفع)، sink (يغوص)، glow (حرارة/ضوء)، light (المصباح يضيء)، grow (نمو)، none.
+- من 3 إلى 6 أدوات، ومن 3 إلى 6 خطوات، و variable فيها 3 خيارات و level من 1 إلى 3 حسب شدة التأثير.`;
 }
 function parseJSON(text) {
   let t = String(text || "").replace(/^\s*```(?:json)?/i, "").replace(/```\s*$/, "").trim();
@@ -95,6 +107,17 @@ function checkGame(d) {
   const st = d.order && Array.isArray(d.order.steps) ? d.order.steps.filter(str).slice(0, 6) : [];
   d.order = st.length >= 3 ? { task: str(d.order.task) ? d.order.task : "رتّب الخطوات", steps: st } : null;
   return d.quiz.length >= 3 ? d : null;
+}
+function checkSheet(d) {
+  if (!d || d.error === "unsafe") return d && str(d.message) ? d : null;
+  if (!str(d.title) || !Array.isArray(d.steps) || d.steps.filter(str).length < 2) return null;
+  d.materials = (Array.isArray(d.materials) ? d.materials : []).filter(str).slice(0, 10);
+  d.steps = d.steps.filter(str).slice(0, 10);
+  d.questions = (Array.isArray(d.questions) ? d.questions : []).filter(str).slice(0, 6);
+  const t = d.table;
+  d.table = t && Array.isArray(t.columns) && t.columns.filter(str).length >= 2
+    ? { title: str(t.title) ? t.title : "جدول الملاحظات", columns: t.columns.filter(str).slice(0, 5), rows: Math.min(6, Math.max(2, parseInt(t.rows, 10) || 3)) } : null;
+  return d;
 }
 function checkSim(d) {
   if (!d || d.error === "unsafe") return d && str(d.message) ? d : null;
@@ -156,7 +179,7 @@ async function geminiLane(key, id, q, job, signal, log) {
       r = await fetch(`${GEMINI}/models/${id}:generateContent`, {
         method: "POST", signal,
         headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({ system_instruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text: q }] }], generationConfig, safetySettings: SAFETY }),
+        body: JSON.stringify({ system_instruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text: q.text }, ...(q.images || []).map((im) => ({ inline_data: { mime_type: im.mime, data: im.data } }))] }], generationConfig, safetySettings: SAFETY }),
       });
     } catch { log.push({ by: id, error: signal.aborted ? "timeout" : "network", ms: Date.now() - t0 }); return { kind: "timeout" }; }
     const info = { by: id, status: r.status, ms: Date.now() - t0 };
@@ -200,7 +223,11 @@ async function chatLane(p, key, q, job, signal, log) {
   let model;
   try { model = await chatModel(p, key); } catch (e) { log.push({ by: p.name, error: e.kind, status: e.status }); return { kind: e.kind === "bad_key" ? "bad_key" : "failed" }; }
   if (!model) { log.push({ by: p.name, error: "no_model" }); return { kind: "failed" }; }
-  const messages = [{ role: "system", content: sys }, { role: "user", content: q }];
+  if ((q.images || []).length && !p.openai) { log.push({ by: p.name, error: "no_images" }); return { kind: "failed" }; }
+  const userContent = (q.images || []).length
+    ? [{ type: "text", text: q.text }, ...q.images.map((im) => ({ type: "image_url", image_url: { url: `data:${im.mime};base64,${im.data}` } }))]
+    : q.text;
+  const messages = [{ role: "system", content: sys }, { role: "user", content: userContent }];
   const rf = job.json ? { response_format: { type: "json_object" } } : {};
   const bodies = p.openai
     ? [{ model, messages, max_completion_tokens: job.max + 500, reasoning_effort: "minimal", ...rf }, { model, messages, max_completion_tokens: job.max + 500, ...rf }, { model, messages }]
@@ -249,9 +276,11 @@ function geminiPick(ids) {
   return [...new Set([full[0], lite[0], full[1] || lite[1]].filter(Boolean))];
 }
 
-async function ask(q, g, mode, level) {
+async function ask(input, g, mode, level) {
+  const q = input; // {text, images}
   const job = mode === "game" ? { sys: jsonPrompt("game", g, level), json: true, check: checkGame, max: 2200 }
     : mode === "sim" ? { sys: jsonPrompt("sim", g, level), json: true, check: checkSim, max: 2200 }
+    : mode === "sheet" ? { sys: jsonPrompt("sheet", g, level), json: true, check: checkSheet, max: 2400 }
     : { sys: systemPrompt(g), json: false, check: null, max: 1200 };
   const log = [];
   const ctl = new AbortController();
@@ -307,7 +336,7 @@ export const maxDuration = 60;
 
 export async function GET(req) {
   const url = new URL(req.url);
-  if (url.searchParams.get("test")) return json(await ask("لماذا تطفو بعض الأجسام على الماء؟", url.searchParams.get("g") || ""));
+  if (url.searchParams.get("test")) return json(await ask({ text: "لماذا تطفو بعض الأجسام على الماء؟" }, url.searchParams.get("g") || ""));
   const out = { ok: false, providers: [] };
   for (const pr of providers()) {
     const row = { name: pr.name };
@@ -321,14 +350,21 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  let q = "", g = "", mode = "", level = "";
+  let q = "", g = "", mode = "", level = "", fileText = "", images = [];
   try {
     const b = await req.json(); q = String(b.q || "").trim(); g = b.g === "f" || b.g === "m" ? b.g : "";
-    mode = b.mode === "game" || b.mode === "sim" ? b.mode : ""; level = ["a", "b", "c"].includes(b.level) ? b.level : "";
+    mode = ["game", "sim", "sheet"].includes(b.mode) ? b.mode : ""; level = ["a", "b", "c"].includes(b.level) ? b.level : "";
+    if (mode) {
+      fileText = String(b.fileText || "").slice(0, 15000);
+      images = (Array.isArray(b.images) ? b.images : []).slice(0, 4)
+        .filter((im) => im && /^image\/(jpeg|png|webp)$/.test(im.mime) && typeof im.data === "string" && im.data.length < 1500000);
+    }
   } catch {}
+  if (mode && q.length < 2 && (fileText.length > 20 || images.length)) q = "اصنعها من المحتوى المرفق.";
   if (q.length < 2) return json({ error: "empty" }, 400);
   if (q.length > 600) q = q.slice(0, 600);
-  const out = await ask(q, g, mode, level);
+  const text = q + (fileText ? "\n\nهذا محتوى ملف رفعه المستخدم؛ اعتمد عليه مصدراً أساسياً للمحتوى:\n<<<\n" + fileText + "\n>>>" : "") + (images.length ? "\n\n(أرفق المستخدم صوراً؛ اقرأ ما فيها من نصوص أو رسوم واعتمد عليها.)" : "");
+  const out = await ask({ text, images }, g, mode, level);
   if (out.data) return json({ data: out.data, by: out.by });
   if (out.answer) return json({ answer: out.answer, by: out.by });
   const detail = (out.log || []).map((t) => [t.by, t.status || t.error, t.ms ? t.ms + "ms" : ""].filter(Boolean).join(" ")).join(" | ");
