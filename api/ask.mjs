@@ -419,7 +419,7 @@ export async function POST(req) {
     mode = ["game", "sim", "sheet", "qsheet"].includes(b.mode) ? b.mode : ""; level = ["a", "b", "c"].includes(b.level) ? b.level : "";
     if (mode) {
       fileText = String(b.fileText || "").slice(0, 15000);
-      images = (Array.isArray(b.images) ? b.images : []).slice(0, 4)
+      images = (Array.isArray(b.images) ? b.images : []).slice(0, 5)
         .filter((im) => im && /^image\/(jpeg|png|webp)$/.test(im.mime) && typeof im.data === "string" && im.data.length < 1500000);
     }
   } catch {}
