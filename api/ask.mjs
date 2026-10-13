@@ -14,13 +14,35 @@
 
 const env = (k) => (process.env[k] || "").trim();
 
-const SYSTEM = `أنت «مساعد دهشة علم»، مساعد علمي لطلبة نادي التجارب والابتكارات في مدرسة بسلطنة عُمان (من الصف الأول إلى الثاني عشر).
-- أجب بالعربية الفصحى البسيطة، بجمل قصيرة وواضحة، ومع مثال من الحياة اليومية عند الحاجة.
-- اجعل الإجابة قصيرة: فقرة أو فقرتان، أو نقاط قليلة (أقل من 150 كلمة).
-- ركّز على العلوم والتجارب والابتكار والتقنية والرياضيات والتعلّم.
-- إذا اقترحت تجربة فاذكر أدوات آمنة، ونبّه إلى وجود شخص بالغ، ولا تقترح أي شيء خطر.
-- إذا كان السؤال خارج هذه المواضيع أو غير مناسب للأطفال، فاعتذر بلطف واقترح سؤالاً علمياً بدلاً منه.
-- لا تطلب أي معلومات شخصية من الطالب.`;
+function systemPrompt(g) {
+  const who = g === "f" ? "طالبة" : g === "m" ? "طالب" : "طالب أو طالبة";
+  const address = g === "f"
+    ? "خاطبيها بصيغة المؤنث دائماً (أنتِ، جرّبي، لاحظي)، ونادِها بألقاب مثل: يا عبقرية، يا عالمة المستقبل، يا مبتكرة."
+    : g === "m"
+    ? "خاطبه بصيغة المذكر دائماً (أنتَ، جرّب، لاحظ)، ونادِه بألقاب مثل: يا عبقري، يا عالم المستقبل، يا مبتكر."
+    : "لا تعرف إن كان السائل ولداً أو بنتاً، فاستخدم صيغة تناسب الجميع، مثل: يا عبقري/ة، أو: يا بطل العلوم.";
+  return `أنت «مساعد دهشة علم»، مساعد علمي ودود لطلبة نادي التجارب والابتكارات في مدرسة بسلطنة عُمان (من الصف الأول إلى الثاني عشر). السائل الآن ${who}.
+${address}
+
+طريقة الإجابة (التزم بها في كل مرة):
+1. ابدأ بسطر ترحيب قصير ومشجّع ومتنوّع، مثل: «أهلاً بك يا عبقري! 🌟 سؤال رائع!» ثم ادخل في الشرح مباشرة.
+2. اشرح الفكرة العلمية ببساطة في جملتين أو ثلاث، بكلمات يفهمها طفل.
+3. أعطِ مثالاً من الحياة اليومية في عُمان أو في البيت أو المدرسة.
+4. إن كان مناسباً، اقترح تجربة صغيرة وآمنة في نقاط قليلة، مع التنبيه إلى وجود شخص بالغ.
+5. اختم بجملة تشجيعية أو سؤال صغير يحفّز التفكير.
+اجعل الإجابة كلها أقل من 170 كلمة، واستخدم **الخط العريض** للكلمات العلمية المهمة.
+
+الدقة واللغة:
+- كن دقيقاً علمياً. لا تخترع معلومات أو أرقاماً أو أسماء. إذا لم تكن متأكداً فقل ذلك بلطف واقترح سؤال المعلمة.
+- تأكد من صحة أي حساب أو رقم قبل كتابته.
+- اكتب بعربية فصحى سليمة إملائياً ونحوياً، مع كتابة الهمزات والتاء المربوطة صحيحة، ولا تخلط لغات أخرى إلا لاسم علمي عند الحاجة.
+- لا تستخدم الجداول ولا العناوين الكبيرة.
+
+الأمان:
+- لا تقترح أي شيء خطر (نار، مواد كيميائية خطرة، كهرباء المنزل، أدوات حادة دون إشراف).
+- إذا كان السؤال خارج العلوم والتعلّم أو غير مناسب للأطفال، فاعتذر بلطف واقترح سؤالاً علمياً بدلاً منه.
+- لا تطلب أي معلومات شخصية.`;
+}
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
@@ -71,9 +93,9 @@ function geminiThinking(id) {
   if (/^gemini-2\.5/.test(id)) return [{ thinkingBudget: 0 }, null];
   return [null];
 }
-async function geminiLane(key, id, q, signal, log) {
+async function geminiLane(key, id, q, sys, signal, log) {
   for (const thinking of geminiThinking(id)) {
-    const generationConfig = { temperature: 0.4, maxOutputTokens: 1024 };
+    const generationConfig = { temperature: 0.3, maxOutputTokens: 1200 };
     if (thinking) generationConfig.thinkingConfig = thinking;
     const t0 = Date.now();
     let r;
@@ -81,7 +103,7 @@ async function geminiLane(key, id, q, signal, log) {
       r = await fetch(`${GEMINI}/models/${id}:generateContent`, {
         method: "POST", signal,
         headers: { "content-type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({ system_instruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: "user", parts: [{ text: q }] }], generationConfig, safetySettings: SAFETY }),
+        body: JSON.stringify({ system_instruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text: q }] }], generationConfig, safetySettings: SAFETY }),
       });
     } catch { log.push({ by: id, error: signal.aborted ? "timeout" : "network", ms: Date.now() - t0 }); return { kind: "timeout" }; }
     const info = { by: id, status: r.status, ms: Date.now() - t0 };
@@ -100,13 +122,13 @@ async function geminiLane(key, id, q, signal, log) {
 
 // ---------------- OpenAI-compatible providers ----------------
 const CHAT = [
-  { name: "openai", key: "OPENAI_API_KEY", model: "OPENAI_MODEL", base: "https://api.openai.com/v1",
+  { name: "openai", prio: 90, key: "OPENAI_API_KEY", model: "OPENAI_MODEL", base: "https://api.openai.com/v1",
     prefer: [/^gpt-5(\.\d+)?-mini$/, /^gpt-5(\.\d+)?-nano$/, /^gpt-4\.1-mini$/, /^gpt-4o-mini$/, /^gpt-.*mini$/], openai: true },
-  { name: "groq", key: "GROQ_API_KEY", model: "GROQ_MODEL", base: "https://api.groq.com/openai/v1",
+  { name: "groq", prio: 70, key: "GROQ_API_KEY", model: "GROQ_MODEL", base: "https://api.groq.com/openai/v1",
     prefer: [/gpt-oss-120b/, /llama-4-maverick/, /llama-3\.3-70b/, /llama-4/, /qwen/, /gpt-oss-20b/, /llama/] },
-  { name: "openrouter", key: "OPENROUTER_API_KEY", model: "OPENROUTER_MODEL", base: "https://openrouter.ai/api/v1",
+  { name: "openrouter", prio: 40, key: "OPENROUTER_API_KEY", model: "OPENROUTER_MODEL", base: "https://openrouter.ai/api/v1",
     prefer: [/^(google\/gemma|meta-llama\/llama-[34]|qwen\/qwen|deepseek\/deepseek-chat|mistralai\/).*:free$/, /:free$/] },
-  { name: "deepseek", key: "DEEPSEEK_API_KEY", model: "DEEPSEEK_MODEL", base: "https://api.deepseek.com/v1",
+  { name: "deepseek", prio: 75, key: "DEEPSEEK_API_KEY", model: "DEEPSEEK_MODEL", base: "https://api.deepseek.com/v1",
     prefer: [/^deepseek-chat$/, /^deepseek-v/, /^deepseek-/] },
 ];
 async function chatModel(p, key) {
@@ -119,14 +141,14 @@ async function chatModel(p, key) {
     return ids[0] || null;
   });
 }
-async function chatLane(p, key, q, signal, log) {
+async function chatLane(p, key, q, sys, signal, log) {
   let model;
   try { model = await chatModel(p, key); } catch (e) { log.push({ by: p.name, error: e.kind, status: e.status }); return { kind: e.kind === "bad_key" ? "bad_key" : "failed" }; }
   if (!model) { log.push({ by: p.name, error: "no_model" }); return { kind: "failed" }; }
-  const messages = [{ role: "system", content: SYSTEM }, { role: "user", content: q }];
+  const messages = [{ role: "system", content: sys }, { role: "user", content: q }];
   const bodies = p.openai
     ? [{ model, messages, max_completion_tokens: 1500, reasoning_effort: "minimal" }, { model, messages, max_completion_tokens: 1500 }]
-    : [{ model, messages, max_tokens: 1024, temperature: 0.4 }, { model, messages }];
+    : [{ model, messages, max_tokens: 1200, temperature: 0.3 }, { model, messages }];
   for (const body of bodies) {
     const t0 = Date.now();
     let r;
@@ -159,50 +181,74 @@ function providers() {
   return list;
 }
 
-async function ask(q) {
+// Quality order: a stronger model's answer is preferred if it arrives within a short grace time.
+function geminiPrio(id) {
+  const v = parseFloat((id.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || "0");
+  return (id.includes("flash-lite") ? 60 : 85) + Math.min(v, 9) - (/preview|exp/.test(id) ? 3 : 0);
+}
+function geminiPick(ids) {
+  const lite = ids.filter((id) => id.includes("flash-lite"));
+  const full = ids.filter((id) => !id.includes("flash-lite"));
+  return [...new Set([full[0], lite[0], full[1] || lite[1]].filter(Boolean))];
+}
+
+async function ask(q, g) {
+  const sys = systemPrompt(g);
   const log = [];
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 30000);
-  const lanes = [];
+  const lanes = []; // {prio, run: Promise<result>}
+  const geminiLanes = [];
   for (const pr of providers()) {
-    if (pr.type === "chat") { lanes.push(chatLane(pr.p, pr.key, q, ctl.signal, log)); continue; }
-    // Gemini: the first key races its 3 fastest models, any extra key races its fastest one
-    lanes.push((async () => {
-      let ids;
-      try { ids = await geminiModels(pr.key); } catch (e) { log.push({ by: pr.name, error: e.kind, status: e.status }); return { kind: e.kind === "bad_key" ? "bad_key" : "failed" }; }
-      const n = pr.name === "gemini" ? 3 : 1;
-      if (!ids.length) { log.push({ by: pr.name, error: "no_model" }); return { kind: "failed" }; }
-      return firstOk(ids.slice(0, n).map((id) => geminiLane(pr.key, id, q, ctl.signal, log)));
-    })());
+    if (pr.type === "chat") { lanes.push({ prio: pr.p.prio, run: chatLane(pr.p, pr.key, q, sys, ctl.signal, log) }); continue; }
+    geminiLanes.push(pr);
   }
-  if (!lanes.length) { clearTimeout(timer); return { error: "not_configured", log }; }
-  const res = await firstOk(lanes, true);
-  clearTimeout(timer);
+  // Gemini: the first key runs up to 3 models (strong + fast), extra keys run their strongest model as backup
+  const geminiSetups = await Promise.all(geminiLanes.map(async (pr, i) => {
+    try {
+      const ids = geminiPick(await geminiModels(pr.key));
+      if (!ids.length) { log.push({ by: pr.name, error: "no_model" }); return; }
+      (i === 0 ? ids : ids.slice(0, 1)).forEach((id) =>
+        lanes.push({ prio: geminiPrio(id) - (i ? 20 : 0), run: geminiLane(pr.key, id, q, sys, ctl.signal, log) }));
+    } catch (e) { log.push({ by: pr.name, error: e.kind, status: e.status }); lanes.push({ prio: 0, run: Promise.resolve({ kind: e.kind === "bad_key" ? "bad_key" : "failed" }) }); }
+  }));
+  void geminiSetups;
+  if (!lanes.length) return { error: "not_configured", log };
+
+  const res = await new Promise((resolve) => {
+    const GRACE = 3500; // wait this long after the first answer for a stronger model
+    const pending = new Set(lanes);
+    const fails = [];
+    let best = null, graceTimer = null;
+    const hard = setTimeout(() => finish(), 32000);
+    function finish() {
+      clearTimeout(hard); clearTimeout(graceTimer);
+      if (best) return resolve(best);
+      const kinds = fails.map((x) => x.kind);
+      resolve({ kind: ["blocked", "busy", "timeout", "bad_key"].find((k) => kinds.includes(k)) || "failed" });
+    }
+    function check() {
+      if (best && ![...pending].some((l) => l.prio > best.prio)) return finish();
+      if (!pending.size) return finish();
+    }
+    lanes.forEach((lane) => lane.run.then((r) => {
+      pending.delete(lane);
+      if (r.kind === "ok") {
+        if (!best || lane.prio > best.prio) best = { ...r, prio: lane.prio };
+        if (!graceTimer) graceTimer = setTimeout(finish, GRACE);
+      } else fails.push(r);
+      check();
+    }, () => { pending.delete(lane); fails.push({ kind: "failed" }); check(); }));
+  });
   ctl.abort();
   if (res.kind === "ok") return { answer: res.text, by: res.by, log };
   return { error: res.kind, log };
-}
-
-// resolves with the first {kind:"ok"}; otherwise, once all settle, with the most telling failure
-function firstOk(promises) {
-  return new Promise((resolve) => {
-    let left = promises.length; const all = [];
-    promises.forEach((p) => p.then((r) => {
-      all.push(r);
-      if (r.kind === "ok") resolve(r);
-      else if (--left === 0) {
-        const kinds = all.map((x) => x.kind);
-        resolve({ kind: ["blocked", "busy", "timeout", "bad_key"].find((k) => kinds.includes(k)) || "failed" });
-      }
-    }, () => { all.push({ kind: "failed" }); if (--left === 0) resolve({ kind: "failed" }); }));
-  });
 }
 
 export const maxDuration = 60;
 
 export async function GET(req) {
   const url = new URL(req.url);
-  if (url.searchParams.get("test")) return json(await ask("لماذا تطفو بعض الأجسام على الماء؟"));
+  if (url.searchParams.get("test")) return json(await ask("لماذا تطفو بعض الأجسام على الماء؟", url.searchParams.get("g") || ""));
   const out = { ok: false, providers: [] };
   for (const pr of providers()) {
     const row = { name: pr.name };
@@ -216,11 +262,11 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  let q = "";
-  try { q = String((await req.json()).q || "").trim(); } catch {}
+  let q = "", g = "";
+  try { const b = await req.json(); q = String(b.q || "").trim(); g = b.g === "f" || b.g === "m" ? b.g : ""; } catch {}
   if (q.length < 2) return json({ error: "empty" }, 400);
   if (q.length > 600) q = q.slice(0, 600);
-  const out = await ask(q);
+  const out = await ask(q, g);
   if (out.answer) return json({ answer: out.answer, by: out.by });
   const detail = (out.log || []).map((t) => [t.by, t.status || t.error, t.ms ? t.ms + "ms" : ""].filter(Boolean).join(" ")).join(" | ");
   const err = out.error === "failed" ? "no_model" : out.error;
