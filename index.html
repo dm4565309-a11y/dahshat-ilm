@@ -360,7 +360,8 @@ var KIND = {image:{l:"صور",t:"teal",i:"image"},video:{l:"فيديو",t:"coral
 
 var state = JSON.parse(document.getElementById("dh-data").textContent);
 var ui = {view:"home", field:"all", kind:"all", q:"", admin:false, modal:null, draft:null, busy:false, toast:""};
-ui.pin=""; ui.loading=true; ui.up=null;
+ui.pin=""; ui.loading=true; ui.up=null; ui.aiG="";
+try { ui.aiG = localStorage.getItem("dh-g") || ""; } catch(e) {}
 try { ui.pin = sessionStorage.getItem("dh-pin") || ""; ui.admin = !!ui.pin; } catch(e) {}
 
 /* ---------- helpers ---------- */
@@ -568,7 +569,7 @@ function askHere(){
   if(ui.aiAns&&ui.aiAns.loading)return;
   ui.aiAns={loading:true};updateAi();play("tap");
   var ctl=window.AbortController?new AbortController():null,timer=setTimeout(function(){if(ctl)ctl.abort();},45000);
-  fetch("/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({q:q}),signal:ctl?ctl.signal:undefined}).then(function(r){
+  fetch("/api/ask",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({q:q,g:ui.aiG||""}),signal:ctl?ctl.signal:undefined}).then(function(r){
     var ct=r.headers.get("content-type")||"";
     if(!r.ok||ct.indexOf("application/json")>-1){
       return r.json().catch(function(){return {};}).then(function(j){
@@ -615,7 +616,7 @@ function aiResults(){
   return aiAnswer()+site+'<p class="hint">أو افتح سؤالك في أداة أخرى:</p>'+tools;
 }
 function aiModal(){
-  return modalShell('<div class="modal-head"><span class="mark ai-mark">'+ic("ai",28)+'</span><div><h2>اسأل الذكاء الاصطناعي</h2><p>اكتب سؤالك العلمي وستظهر الإجابة هنا</p></div>'+closeBtn()+'</div><form class="form" id="ai-form" novalidate><label class="field"><span>سؤالك</span><textarea class="input" id="ai-q" rows="3" placeholder="مثال: لماذا السماء زرقاء؟">'+esc(ui.aiq||"")+'</textarea></label><div class="form-foot"><button type="submit" class="btn btn-primary">'+ic("ai",18)+'اسأل المساعد</button></div><label class="ai-simple"><input type="checkbox" id="ai-simple"'+(ui.aiSimple!==false?" checked":"")+'> اطلب شرحاً مبسّطاً عند الفتح في الأدوات الأخرى</label><div class="ai-ideas">'+AI_IDEAS.map(function(t){return '<button type="button" class="ai-idea" data-act="ai-idea" data-q="'+esc(t)+'">'+esc(t)+"</button>";}).join("")+'</div></form><div id="ai-results">'+aiResults()+'</div><p class="hint">تفتح هذه الأدوات خارج موقع النادي. بعضها يتطلب أن يكون عمر المستخدم ١٣ سنة فأكثر، فاستعن بوليّ أمرك أو معلمتك.</p>',false,"البحث بالذكاء الاصطناعي");
+  return modalShell('<div class="modal-head"><span class="mark ai-mark">'+ic("ai",28)+'</span><div><h2>اسأل الذكاء الاصطناعي</h2><p>اكتب سؤالك العلمي وستظهر الإجابة هنا</p></div>'+closeBtn()+'</div><form class="form" id="ai-form" novalidate><div class="field"><span>أنا</span>'+seg("aig",ui.aiG||"",[["m","طالب","user"],["f","طالبة","user"]])+'</div><label class="field"><span>سؤالك</span><textarea class="input" id="ai-q" rows="3" placeholder="مثال: لماذا السماء زرقاء؟">'+esc(ui.aiq||"")+'</textarea></label><div class="form-foot"><button type="submit" class="btn btn-primary">'+ic("ai",18)+'اسأل المساعد</button></div><label class="ai-simple"><input type="checkbox" id="ai-simple"'+(ui.aiSimple!==false?" checked":"")+'> اطلب شرحاً مبسّطاً عند الفتح في الأدوات الأخرى</label><div class="ai-ideas">'+AI_IDEAS.map(function(t){return '<button type="button" class="ai-idea" data-act="ai-idea" data-q="'+esc(t)+'">'+esc(t)+"</button>";}).join("")+'</div></form><div id="ai-results">'+aiResults()+'</div><p class="hint">تفتح هذه الأدوات خارج موقع النادي. بعضها يتطلب أن يكون عمر المستخدم ١٣ سنة فأكثر، فاستعن بوليّ أمرك أو معلمتك.</p>',false,"البحث بالذكاء الاصطناعي");
 }
 function loginModal(){
   return modalShell('<div class="modal-head"><span class="mark">'+ic("lock",26)+'</span><div><h2>دخول المسؤول</h2><p>أدخل رمز الدخول لإضافة الأعمال والأخبار</p></div>'+closeBtn()+'</div><form class="form" id="login-form" novalidate>'+field("رمز الدخول",'<input class="input" id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" dir="ltr" style="font-size:22px;letter-spacing:.4em;text-align:center">')+'<p class="err" id="err" role="alert"></p><div class="form-foot"><button type="submit" class="btn btn-primary">'+ic("lock",18)+'دخول</button><button type="button" class="btn btn-ghost" data-act="close">إلغاء</button></div></form>',false,"دخول المسؤول");
@@ -815,7 +816,7 @@ function submit(){
 app.addEventListener("click",function(e){
   var s=e.target.closest("[data-seg]");
   if(s){play("tap");var g=s.dataset.seg,v=s.dataset.val;
-    if(g==="field"){ui.field=v;}else if(g==="kind"){ui.kind=v;}else if(g==="nkind"){readForm();ui.draft.kind=v;if(v==="link")ui.draft.images=[];else if(v==="video")ui.draft.images=ui.draft.images.slice(0,1);}
+    if(g==="aig"){ui.aiG=v;try{localStorage.setItem("dh-g",v);}catch(e){}var ta0=document.getElementById("ai-q");if(ta0)ui.aiq=ta0.value;}else if(g==="field"){ui.field=v;}else if(g==="kind"){ui.kind=v;}else if(g==="nkind"){readForm();ui.draft.kind=v;if(v==="link")ui.draft.images=[];else if(v==="video")ui.draft.images=ui.draft.images.slice(0,1);}
     render();return;}
   var el=e.target.closest("[data-act]");if(!el)return;
   var a=el.dataset.act,id=el.dataset.id;
